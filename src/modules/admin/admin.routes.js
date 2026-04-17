@@ -18,6 +18,8 @@ router.put('/bookings/:id/cancel', controller.cancelBooking);
 router.get('/payments', controller.getPayments);
 // router.put('/kbzpay/:id/approve', controller.verifyKBZ);
 
-router.get('/stats', controller.getStats);
+router.get('/stats', (req, res) => {
+    res.json({ ok: true });
+});
 
 module.exports = router;
