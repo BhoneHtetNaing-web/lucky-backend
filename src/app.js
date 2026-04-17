@@ -10,12 +10,12 @@ const kbzRoutes = require('./modules/kbzpay/kbzpay.routes');
 
 const app = express();
 
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
 app.use('/api/flights', flightRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/kbzpay', kbzRoutes);
 
-module.exports - app;
+module.exports = app;
