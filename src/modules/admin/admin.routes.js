@@ -16,7 +16,7 @@ router.put('/bookings/:id/cancel', controller.cancelBooking);
 
 // Payments
 router.get('/payments', controller.getPayments);
-router.put('/kbzpay/:id/approve', controller.verifyKBZ);
+// router.put('/kbzpay/:id/approve', controller.verifyKBZ);
 
 router.get('/stats', controller.getStats);
 
