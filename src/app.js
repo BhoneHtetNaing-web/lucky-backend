@@ -3,7 +3,7 @@
 const express = require('express');
 const cors = require('cors');
 
-const flightRoutes = require('./modules/flight/flight.routes.');
+const flightRoutes = require('./modules/flight/flight.routes');
 const bookingRoutes = require('./modules/booking/booking.controller');
 const adminRoutes = require('./modules/admin/admin.routes');
 const kbzRoutes = require('./modules/kbzpay/kbzpay.routes');
