@@ -9,11 +9,15 @@ router.use(adminAuth);
 
 // Bookings
 router.get('/bookings', controller.getBookings);
+// BookingById
 router.get('/bookings/:id', controller.getBookingById);
-router.push('/bookings/:id/cancel', controller.cancelBooking);
+// Fix
+router.put('/bookings/:id/cancel', controller.cancelBooking);
 
 // Payments
 router.get('/payments', controller.getPayments);
 router.put('/kbzpay/:id/approve', controller.verifyKBZ);
+
+router.get('/stats', controller.getStats);
 
 module.exports = router;
