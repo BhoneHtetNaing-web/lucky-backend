@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 const upload = require('../../middleware/upload');
-const controller = require('./kbzpay.controller');
+const controller = require('../../controllers/kbzpay.controller');
 
-router.post('/submit', upload.single('screenshot'), controller.submitKBZPayment);
+router.post('/create', controller.createKBZPayRequest);
+router.post('/submit-proof', controller.submitKBZProof);
+// router.post('/submit', upload.single('screenshot'), controller.submitKBZPayment);
 
 module.exports = router;

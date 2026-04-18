@@ -20,10 +20,23 @@ const getPayments = async (req, res) => {
     res.json(data);
 };
 
-const verifyKBZ = async (req, res) => {
-    const data = await service.verifyKBZPayment(req.params.id);
-    res.json(data);
-}
+const approveKBZPayment = async (req, res) => {
+  const { id } = req.params;
+
+  const payment = await pool.query(
+    `UPDATE payments SET status='SUCCESS' WHERE id=$1 RETURNING *`,
+    [id]
+  );
+
+  const bookingId = payment.rows[0].booking_id;
+
+  await pool.query(
+    `UPDATE bookings SET status='CONFIRMED' WHERE id=$1`,
+    [bookingId]
+  );
+
+  res.json({ success: true });
+};
 
 const getStats = async (req, res) => {
     const data = await service.getDashboardStats();
@@ -35,5 +48,6 @@ module.exports = {
     getBookingById,
     cancelBooking,
     getPayments,
+    approveKBZPayment,
     getStats,
 };
