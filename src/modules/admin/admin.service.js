@@ -93,6 +93,10 @@ const getDashboardStats = async () => {
     };
 };
 
+exports.getUserCount = async () => {
+  return await User.count();
+}
+
 module.exports = {
     getAllBookings,
     getBookingDetails,

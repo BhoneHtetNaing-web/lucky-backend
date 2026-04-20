@@ -1,12 +1,12 @@
 const pool = require('../../config/db');
 
-const createBooking = async (userId, data) => {
+exports.createBooking = async (userId, flightId) => {
   const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
 
-    // 1. Insert booking
+        // 1. Insert booking
     const bookingResult = await client.query(
       `INSERT INTO bookings (user_id, flight_id, total_price)
        VALUES ($1, $2, $3)
@@ -25,15 +25,31 @@ const createBooking = async (userId, data) => {
       );
     }
 
-    await client.query('COMMIT');
+    // 2) auto create payment (KBZ)
+    const paymentRes = await client.query(
+      `INSERT INTO payments(booking_id, method, status)
+      VALUES($1,'KBZ','pending') RETURNING *`,
+      [booking.id]
+    );
 
-    return booking;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
+    await client.query("COMMIT");
+
+    return {
+      booking,
+      payment: paymentRes.rows[0]
+    };
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
   } finally {
     client.release();
-  }
+  };
+  
+  const result = await pool.query(
+    "INSERT INTO bookings(user_id, flight_id, status) VALUES($1, $2, $3) RETURNING *",
+    [userId, flightId, "pending"]
+  );
+  return result.rows[0];
 };
 
-module.exports = { createBooking };
+// module.exports = { createBooking };

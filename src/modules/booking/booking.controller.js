@@ -1,8 +1,9 @@
-const { createBooking } = require('./booking.service');
+const db = require('../../config/db');
+const service = require('./booking.service');
 const { createBookingSchema } = require('./booking.validation');
 const { createCheckoutSession } = require('../payment/payment.service');
 
-const createBookingHandler = async (req, res) => {
+const createBooking = async (req, res) => {
     try {
         const { error } = createBookingSchema.validate(req.body);
 
@@ -13,9 +14,11 @@ const createBookingHandler = async (req, res) => {
         }
 
         const userId = req.user?.id || 'demo-user-id';
+
+        const { flightId } = req.body;
         
         // Step 1: Create booking + passengers
-        const booking = await createBooking(userId, req.body);
+        const booking = await createBooking(userId, flightId);
 
         // Step 2: Create Stripe checkout session
         const session = await createCheckoutSession(booking);
@@ -32,4 +35,13 @@ const createBookingHandler = async (req, res) => {
     }
 };
 
-module.exports = { createBookingHandler }
+const getMyBookings = async (req, res) => {
+    const result = await db.query(
+        "SELECT * FROM bookings WHERE user_id = $1",
+        [req.user.id]
+    );
+
+    res.json(result.rows);
+};
+
+module.exports = { createBooking, getMyBookings }
