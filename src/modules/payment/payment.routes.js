@@ -13,6 +13,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+router.post('/', controller.createPayment);
+
 router.post("/upload/:id", upload.single("image"), controller.uploadProof);
 
 router.post('/upload-proof/:id', upload.single("image"), (req, res) => {
@@ -21,8 +23,6 @@ router.post('/upload-proof/:id', upload.single("image"), (req, res) => {
         file: req.file.filename
     });
 });
-
-router.post('/create', controller.createPayment);
 
 router.post(
     '/webhook',

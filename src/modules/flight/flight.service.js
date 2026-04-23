@@ -1,26 +1,15 @@
-const axios = require('axios');
+const axios = require("axios");
 
-const API_KEY = process.env.KIWI_API_KEY;
+const searchFlights = async (from, to, date) => {
+  const res = await axios.get(
+    "https://api.duffel.com/air/offer_requests", {
+      headers: {
+        Authorization: `Bearer ${process.env.DUFFEL_API_KEY}`,
+        "Duffel-Version": "v1",
+      },
+    });
 
-const searchFlights = async ( from, to, date ) => {
-        const res = await axios.get(
-            "https://api.tequila.kiwi.com/v2/search",
-            {
-                headers: {
-                    apikey: API_KEY,
-                },
-                params: {
-                    fly_from: from,
-                    fly_to: to,
-                    date_from: date,
-                    date_to: date,
-                    curr: "USD",
-                    limit: 10
-                },
-            }
-        );
+    return res.data;
+};
 
-        return res.data.data;
-    };
-
-module.exports = { searchFlights };
+module.exports = { searchFlights }

@@ -1,8 +1,8 @@
 
 const router = require("express").Router();
 
-const controller = require("./flight.controller");
+const { searchFlights } = require("./flight.controller");
 
-router.get("/search", controller.searchFlights);
+router.post("/search", searchFlights);
 
 module.exports = router;

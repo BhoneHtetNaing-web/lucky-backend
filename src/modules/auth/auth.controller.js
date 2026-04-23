@@ -1,93 +1,86 @@
-const service = require("./auth.service");
-const { registerSchema } = require("./auth.validation");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const db = require("../../config/db");
+const pool = require("../../config/db");
+const bcrypt = require("bcryptjs");
+const { registerSchema } = require("./auth.validation");
 
-const refresh = (req, res) => {
-    const { refreshToken } = req.body;
+// REGISTER
+const register = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-    if (!refreshToken) {
-        return res.status(401).json({ error: "No refresh token" });
+    // ❗ check input
+    if (!email || !password) {
+      return res.status(400).json({ error: "Missing fields" });
     }
 
-    try {
-        const decoded = jwt.verify(
-            refreshToken,
-            process.env.JWT_REFRESH_SECRET
-        );
+    // check existing user
+    const existing = await pool.query(
+      "SELECT * FROM users WHERE email=$1",
+      [email]
+    );
 
-        const newAccess = jwt.sign(
-            { id: decoded.id },
-            process.env.JWT_SECRET,
-            { expiresIn: "15m" }
-        );
-
-        res.json({ accessToken: newAccess });
-
-    } catch {
-        res.status(403).json({ error: "Invalid refresh token" });
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ message: "User already exists" });
     }
+
+    // ❗ hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // ❗ insert into DB
+    await pool.query("INSERT INTO users (email, password) VALUES ($1,$2)", [
+      email,
+      hashedPassword,
+    ]);
+
+    return res.status(201).json({
+      message: "Register success",
+    });
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+    return res.status(500).json({ error: "Register failed" });
+  }
 };
 
-const register = async (req, res) => {
-        const { email, password } = req.body; // MUST HAVE THIS
-
-        // hash password
-        const hashed = await bcrypt.hash(password, 10);
-
-        const user = await db.query(
-            "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *",
-            [email, hashed]
-        );
-
-        res.json(user.rows[0]);
-    };
-
+// LOGIN
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1️⃣ check user
-    const result = await db.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
+    // 1.Find user
+    const result = await pool.query("SELECT * FROM users WHERE email=$1", [
+      email,
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: "User not found" });
+    }
 
     const user = result.rows[0];
 
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-        }
+    // 2. Compare password (IMPORTANT)
+    const isMatch = await bcrypt.compare(password, user.password);
 
-    // 2️⃣ check password
-    const valid = await bcrypt.compare(password, user.password);
-
-    if (!valid) {
-      return res.status(400).json({ message: "Wrong password" });
+    if (!isMatch) {
+      return res.status(400).json({ error: "Wrong Password" });
     }
 
-    // 3️⃣ create token
-    const token = jwt.sign(
-      { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // 3.Generate token
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
-    // 4️⃣ send response
     return res.json({
-      message: "Login successful",
-      token,
-       user: {
+      message: "Login success",
+      user: {
         id: user.id,
         email: user.email,
-        role: user.role,
       },
+      token,
     });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("LOGIN ERROR:", err);
+    return res.status(500).json({ message: "Login failed" });
   }
 };
 
-module.exports = { refresh, register, login }
+module.exports = { register, login };

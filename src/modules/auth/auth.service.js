@@ -1,6 +1,10 @@
+import axios from "axios";
+
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../../config/db");
+
+const API_URL = "http://192.168.100.69:5000/api/auth";
 
 const generateTokens = (user) => {
     const accessToken = jwt.sign(
@@ -19,7 +23,7 @@ const generateTokens = (user) => {
     return { accessToken, refreshToken };
 };
 
-exports.register = async (data) => {
+const register = async (data) => {
     const hashed = await bcrypt.hash(data.password, 10);
 
     const user = await db.query(
@@ -30,7 +34,21 @@ exports.register = async (data) => {
     return user.rows[0];
 };
 
-exports.login = async (email, password) => {
+export const registerUser = async (email, password) => {
+    try {
+        const res = await axios.post(`${API_URL}/register`, {
+            email,
+            password
+        });
+
+        return res.data;
+    } catch (err) {
+        console.log(err.response?.data);
+        throw err;
+    }
+}
+
+const login = async (email, password) => {
     const user = await db.query("SELECT * FROM users WHERE email=$1", [email]);
 
     if (!user.rows.length) throw new Error("User not found");
@@ -48,3 +66,5 @@ exports.login = async (email, password) => {
 
     return { user: user.rows[0], token };
 };
+
+module.exports = { generateTokens, register, login }

@@ -3,6 +3,7 @@ const service = require('./booking.service');
 const { createBookingSchema } = require('./booking.validation');
 const { createCheckoutSession } = require('../payment/payment.service');
 
+// CREATE BOOKING
 const createBooking = async (req, res) => {
     try {
         const { error } = createBookingSchema.validate(req.body);
@@ -13,19 +14,29 @@ const createBooking = async (req, res) => {
             });
         }
 
-        const userId = req.user?.id || 'demo-user-id';
+        const { offerId, total } = req.body;
+        const userId = req.user.id;
 
         const { flightId } = req.body;
         
         // Step 1: Create booking + passengers
-        const booking = await createBooking(userId, flightId);
+
+        const { flight_id, seats, total_price } = req.body;
+        const user_id = req.user.id; // from auth middleware
+
+        const result = await db.query(
+            `INSERT INTO bookings (user_id, flight_id, seats, total_price)
+            VALUES ($1,$2,$3,$4)
+            RETURNING *`,
+            [user_id, flight_id, seats, total_price]
+        );
 
         // Step 2: Create Stripe checkout session
-        const session = await createCheckoutSession(booking);
+        const session = await createCheckoutSession(result);
 
         res.status(201).json({
             success:true,
-            booking_id: booking.id,
+            booking: result.rows[0],
             payment_url: session.url,
         });
     } catch (err) {

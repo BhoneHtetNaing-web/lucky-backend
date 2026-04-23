@@ -1,23 +1,33 @@
-require('dotenv').config();
+require("dotenv").config();
+const app = require("./app");
 
-const app = require('./app');
-const server = require("http").createServer(app);
-const io = require("socket.io")(server, {
-    cors: { origin: "*" }
-});
-
+// ❗ PORT
 const PORT = process.env.PORT || 5000;
 
-io.on("connection", (socket) => {
-    console.log("User connected");
+// ❗ Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 
-app.set("io", io);
+// require('dotenv').config();
 
-server.listen(5000);
+// const app = require('./app');
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-})
+// const PORT = process.env.PORT || 5000;
 
-console.log("DB PASSWORD:", process.env.DB_PASSWORD);
+// const server = require("http").createServer(app);
+// server.listen(5000);
+
+// const io = require("socket.io")(server, {
+//     cors: { origin: "*" }
+// });
+
+// io.on("connection", (socket) => {
+//     console.log("User connected");
+// });
+
+// app.set("io", io);
+
+// app.listen(PORT, () => {
+//     console.log(`Server running on port ${PORT}`);
+// })

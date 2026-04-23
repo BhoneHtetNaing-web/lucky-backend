@@ -69,21 +69,28 @@ const reject = async (req, res) => {
     res.json({ message: "Rejected" });
 };
 
-exports.approvePayment = async (req, res) => {
-    const paymentId = req.params.id;
+const approvePayment = async (req, res) => {
+    const { paymentId } = req.params.id;
 
-    // 1) approve payment
+    // 1) ADMIN APPROVE PAYMENT
+    const payment = await db.query(
+        "SELECT * FROM payments WHERE id=$1",
+        [paymentId]
+    );
+
+    const bookingId = payment.rows[0].booking_id;
+    // 2) approve payment
     await db.query(
         `UPDATE payments SET status='approved' WHERE id=$1`,
         [paymentId]
     );
 
-    // 2) confirm booking
+    // 3) confirm booking
     await db.query(
         `UPDATE bookings
         SET status='confirmed'
         WHERE id=(SELECT booking_id FROM payments WHERE id=$1)`,
-        [paymentId]
+        [bookingId]
     );
 
     res.json({ message: "Approved & Booking Confirmed" });
@@ -125,6 +132,7 @@ module.exports = {
     dashboard,
     getBookings,
     getBookingById,
+    approvePayment,
     cancelBooking,
     approveBooking,
     reject,
