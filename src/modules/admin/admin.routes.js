@@ -5,9 +5,7 @@ const controller = require('./admin.controller');
 const { adminMiddleware } = require('../../middleware/admin.middleware');
 const authMiddleware = require("../../middleware/auth.middleware");
 
-// Protected all routes
-router.use(admin);
-
+router.use(adminMiddleware);
 // DASHBOARD
 router.get("/dashboard", authMiddleware, adminMiddleware, controller.getDashboard);
 //
