@@ -3,7 +3,7 @@ const crypto = require("crypto");
 
 const KBZ_URL = "https://api.kbzpay.com/payment";
 
-exports.createKBZPayment = async (order) => {
+const createKBZPayment = async (order) => {
   const payload = {
     merchant_id: process.env.KBZ_MERCHANT_ID,
     order_id: order.id,
@@ -26,3 +26,5 @@ exports.createKBZPayment = async (order) => {
 
   return res.data;
 };
+
+module.exports = { createKBZPayment };
