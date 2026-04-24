@@ -8,19 +8,45 @@ const adminOnly = (req, res, next) => {
     next();
 };
 
-const dashboard = async (req, res) => {
-    const users = await db.query("SELECT COUNT(*) FROM users");
-    const bookings = await db.query("SELECT COUNT(*) FROM bookings");
+const getDashboard = async (req, res) => {
+  try {
+    const users = await db.query("SELECT COUNT() FROM users");
+    const bookings = await db.query("SELECT COUNT() FROM bookings");
+    const payments = await db.query("SELECT SUM(amount) FROM payments");
 
     res.json({
-        users: users.rows[0].count,
-        bookings: bookings.rows[0].count
+      users: users.rows[0].count,
+      bookings: bookings.rows[0].count,
+      revenue: payments.rows[0].sum || 0,
     });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
 };
 
 const getBookings = async (req, res) => {
-    const data = await service.getAllBookings();
-    res.json(data);
+  const result = await db.query("SELECT * FROM bookings ORDER BY created_at DESC");
+  res.json(result.rows);
+};
+
+const getPayments = async (req, res) => {
+  const result = await db.query("SELECT * FROM payments ORDER BY created_at DESC");
+  res.json(result.rows);
+};
+
+// 
+const getStats = async (req, res) => {
+    const data = await service.getDashboardStats();
+    const users = await db.query("SELECT COUNT(*) FROM users");
+    const bookings = await db.query("SELECT COUNT(*) FROM bookings");
+    const payments = await db.query("SELECT COUNT(*) FROM payments WHERE status='submitted'");
+
+    res.json({
+        data,
+        users: users.rows[0].count,
+        bookings: bookings.rows[0].count,
+        pendingPayments: payments.rows[0].count
+    });
 };
 
 const getBookingById = async (req, res) => {
@@ -31,20 +57,6 @@ const getBookingById = async (req, res) => {
 const cancelBooking = async (req, res) => {
     const data = await service.cancelBooking(req.params.id);
     res.json(data);
-};
-
-const getPayments = async (req, res) => {
-    const data = await db.query(`
-        SELECT p.id, p.status, p.proof_image,
-        b.id as booking_id,
-        u.name, u.email
-        FROM payments p
-        JOIN bookings b ON p.booking_id = b.id
-        JOIN users u ON b.user_id = u.id
-        ORDER BY p.id DESC
-        `);
-
-    res.json(data.rows);
 };
 
 const approveBooking = async (req, res) => {
@@ -114,22 +126,8 @@ const approveKBZPayment = async (req, res) => {
   res.json({ success: true });
 };
 
-const getStats = async (req, res) => {
-    const data = await service.getDashboardStats();
-    const users = await db.query("SELECT COUNT(*) FROM users");
-    const bookings = await db.query("SELECT COUNT(*) FROM bookings");
-    const payments = await db.query("SELECT COUNT(*) FROM payments WHERE status='submitted'");
-
-    res.json({
-        data,
-        users: users.rows[0].count,
-        bookings: bookings.rows[0].count,
-        pendingPayments: payments.rows[0].count
-    });
-};
-
 module.exports = {
-    dashboard,
+    getDashboard,
     getBookings,
     getBookingById,
     approvePayment,

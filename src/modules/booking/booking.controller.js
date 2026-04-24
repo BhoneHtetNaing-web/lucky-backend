@@ -13,11 +13,6 @@ const createBooking = async (req, res) => {
                 message: error.details[0].message,
             });
         }
-
-        const { offerId, total } = req.body;
-        const userId = req.user.id;
-
-        const { flightId } = req.body;
         
         // Step 1: Create booking + passengers
 
@@ -55,4 +50,16 @@ const getMyBookings = async (req, res) => {
     res.json(result.rows);
 };
 
-module.exports = { createBooking, getMyBookings }
+const selectSeat = async (req, res) => {
+    const { flightId, seat } = req.body;
+
+    // emit to all users in that flight
+    global.io.to(flightId).emit("seatUpdate", {
+        seat,
+        status: "booked",
+    });
+
+    res.json({ success: true });
+};
+
+module.exports = { createBooking, getMyBookings, selectSeat }

@@ -26,6 +26,9 @@ const searchFlights = async (req, res) => {
       }
     );
 
+    const cache = {};
+    if (cache[key]) return res.json(cache[key]);
+
     res.json(response.data);
   } catch (err) {
     console.log(err.response?.data || err.message);
@@ -33,26 +36,4 @@ const searchFlights = async (req, res) => {
   }
 };
 
-module.exports = { searchFlights }
-
-// const { searchFlights } = require('./flight.service');
-
-// const search = async (req, res) => {
-//     try {
-//     const { from, to, date } = req.body;
-
-//     const flights = await searchFlights(from, to, date);
-
-//     res.json({
-//         success:true,
-//         results: flights
-//     });
-//     } catch (err) {
-//         res.status(500).json({
-//             success: false,
-//             message: err.message
-//         });
-//     }
-// };
-
-// module.exports = { search };
+module.exports = { searchFlights };

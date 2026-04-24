@@ -1,10 +1,44 @@
-const { createCheckoutSession } = require('./payment.service');
-const pool = require('../../config/db');
+const paymentService = require('./payment.service');
+const db = require('../../config/db');
 const stripe = require('../../config/stripe');
 
 const createPayment = async (req, res) => {
-    try {
-        const { bookingId, provider, amount } = req.body;
+        const { amount, booking_id, provider, method, txn_ref, screenshot } = req.body;
+        const user_id = req.user.id;
+
+        const orderId = "ORD-" + Date.now();
+
+        try {
+          let paymentUrl;
+
+          if (provider === "KBZPAY") {
+            const result = await paymentService.createKBZPayPayment({
+              amount,
+              orderId,
+            });
+
+            paymentUrl = result.payment_url;
+          }
+
+          if (provider === "WAVEPAY") {
+            const result = await paymentService.createWavePayPayment({
+              amount,
+              orderId,
+            })
+
+            paymentUrl = result.payment_url;
+          }
+
+          await db.query(
+            `INSERT INTO payments (booking_id, user_id, amount, provider, transaction_id)
+            VALUES ($1,$2,$3,$4,$5)`,
+            [booking_id, user_id, amount, provider, orderId, method, txn_ref, screenshot]
+          );
+
+          res.json({ paymentUrl });
+        } catch (err) {
+          res.status(500).json({ message: err.message });
+        }
 
         const bookingResult = await pool.query(
             'SELECT * FROM bookings WHERE id=$1',
@@ -23,32 +57,10 @@ const createPayment = async (req, res) => {
             });
         }
 
-        const payment = await pool.query(
-          `INSERT INTO payments(booking_id, provider, amount)
-          VALUES($1,$2,$3) RETURNING *`,
-          [bookingId, provider, amount]
-        );
-
         const session = await createCheckoutSession(booking);
 
         res.json(payment.rows[0], session.url);
-    } catch (err) {
-        res.status(500).json({
-            error: "Payment init failed"
-        });
-    }
-};
-
-const createKBZPayment = async (req, res) => {
-    const { booking_id } = req.body;
-
-    const fakePaymentLink = `kbzpay://pay?amount=100&booking=${booking_id}`;
-
-    res.json({
-        payment_url: fakePaymentLink,
-        method: 'KBZPay',
-    });
-};
+    };
 
 const uploadProof = async (req, res) => {
     const paymentId = req.params.id;
@@ -63,60 +75,6 @@ const uploadProof = async (req, res) => {
     );
 
     res.json({ message: "Proof uploaded" });
-};
-
-const handleWebhook = async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    console.error('Webhook signature failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // 🎯 Handle event
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-
-    const bookingId = session.metadata.booking_id;
-
-    try {
-      // ✅ Update booking status
-      await pool.query(
-        `UPDATE bookings SET status='CONFIRMED' WHERE id=$1`,
-        [bookingId]
-      );
-
-      // ✅ Insert payment record
-      await pool.query(
-        `INSERT INTO payments (booking_id, amount, status, transaction_id)
-         VALUES ($1, $2, 'SUCCESS', $3)`,
-        [
-          bookingId,
-          session.amount_total / 100,
-          session.payment_intent,
-        ]
-      );
-
-      console.log('✅ Payment success for booking:', bookingId);
-
-      if (bookingId.status === 'CONFIRMED') {
-        return;
-      }
-
-    } catch (dbErr) {
-      console.error('DB error:', dbErr.message);
-    }
-  }
-
-  res.json({ received: true });
 };
 
 const payBooking = async (req, res) => {
@@ -135,4 +93,25 @@ const payBooking = async (req, res) => {
   res.json({ message: 'Payment success' });
 };
 
-module.exports = { createPayment, createKBZPayment, uploadProof, handleWebhook, payBooking };
+const approvePayment = async (req, res) => {
+  const id = req.params.id;
+
+  await db.query(
+    "UPDATE payments SET status='paid' WHERE id=$1",
+    [id]
+  );
+
+  await db.query(
+    "UPDATE bookings SET payment_status='paid', status='confirmed' WHERE id=(SELECT booking_id FROM payments WHERE id=$1)",
+    [id]
+  );
+
+  await sendTicket(user.email, {
+    flight: "YGN-BKK",
+    seats: "12A, 12B",
+  });
+  
+  res.json({ success: true });
+};
+
+module.exports = { createPayment, uploadProof, payBooking, approvePayment };

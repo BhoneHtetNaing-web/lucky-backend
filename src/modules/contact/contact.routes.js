@@ -1,4 +1,5 @@
 const router = require("express").Router();
+const { sendMessage } = require("./contact.controller");
 
 router.post("/", (req, res) => {
   const { name, email, message } = req.body;
@@ -13,5 +14,7 @@ router.post("/", (req, res) => {
     message: "Message received successfully",
   });
 });
+
+router.post("/contact", sendMessage);
 
 module.exports = router;

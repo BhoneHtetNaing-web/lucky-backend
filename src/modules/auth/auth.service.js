@@ -1,61 +1,31 @@
 import axios from "axios";
 
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const db = require("../../config/db");
+const { hashPassword, comparePassword } = require("../../utils/hash");
 
 const API_URL = "http://192.168.100.69:5000/api/auth";
 
-const generateTokens = (user) => {
-    const accessToken = jwt.sign(
+const createUser = async (email, password) => {
+  const hashed = await hashPassword(password);
 
-        { id: user.id, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.TOKEN_EXPIRE }
-    );
+  const result = await db.query(
+    "INSERT INTO users (email, password, role) VALUES ($1,$2,$3) RETURNING *",
+    [email, hashed, "user"]
+  );
 
-    const refreshToken = jwt.sign(
-        { id: user.id },
-        process.env.JWT_REFRESH_SECRET,
-        { expiresIn: process.env.REFRESH_EXPIRE }
-    );
-
-    return { accessToken, refreshToken };
+  return result.rows[0];
 };
 
-const register = async (data) => {
-    const hashed = await bcrypt.hash(data.password, 10);
+const loginUser = async (email, password) => {
+    const result = await db.query("SELECT * FROM users WHERE email=$1", [email]);
 
-    const user = await db.query(
-        "INSERT INTO users(name,email,phone,password) VALUES($1,$2,$3,$4) RETURNING *",
-        [data.name, data.email, data.phone, hashed]
-    );
+    const user = result.rows[0];
+    if (!user) throw new Error("User not found");
 
-    return user.rows[0];
-};
-
-export const registerUser = async (email, password) => {
-    try {
-        const res = await axios.post(`${API_URL}/register`, {
-            email,
-            password
-        });
-
-        return res.data;
-    } catch (err) {
-        console.log(err.response?.data);
-        throw err;
-    }
-}
-
-const login = async (email, password) => {
-    const user = await db.query("SELECT * FROM users WHERE email=$1", [email]);
-
-    if (!user.rows.length) throw new Error("User not found");
-
-    const valid = await bcrypt.compare(password, user.rows[0].password);
+    const valid = await comparePassword(password, user.password);
     if (!valid) throw new Error("Wrong password");
 
+    // //
     return generateTokens(user.rows[0]);
 
     const token = jwt.sign(
@@ -64,7 +34,7 @@ const login = async (email, password) => {
         { expiresIn: "7d" }
     );
 
-    return { user: user.rows[0], token };
+    return { user, token };
 };
 
-module.exports = { generateTokens, register, login }
+module.exports = { generateTokens, createUser, loginUser }

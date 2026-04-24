@@ -40,4 +40,34 @@ const holdSeat = async (req, res) => {
     res.json({ message: "Seat held" });
 };
 
-module.exports = { getSeats, holdSeat }
+const lockSeat = async (req, res) => {
+  const { flightId, seat, userId } = req.body;
+
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+
+  // check if already locked
+  const existing = await db.query(
+    "SELECT * FROM seat_locks WHERE flight_id=$1 AND seat=$2 AND expires_at > NOW()",
+    [flightId, seat]
+  );
+
+  if (existing.rows.length > 0) {
+    return res.status(400).json({ msg: "Seat already locked" });
+  }
+
+  await db.query(
+    "INSERT INTO seat_locks (flight_id, seat, user_id, expires_at) VALUES ($1,$2,$3,$4)",
+    [flightId, seat, userId, expiresAt]
+  );
+
+  // 🔥 broadcast
+  global.io.to(flightId).emit("seatUpdate", {
+    seat,
+    status: "locked",
+    expiresAt,
+  });
+
+  res.json({ success: true, expiresAt });
+};
+
+module.exports = { getSeats, holdSeat, lockSeat };

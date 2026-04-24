@@ -2,7 +2,11 @@ const express = require('express');
 const router = express.Router();
 const multer = require("multer");
 
+const db = require("../../config/db");
+
 const controller = require('./payment.controller');
+const webhook = require('./payment.webhook');
+const auth = require("../../middleware/auth.middleware");
 
 const storage = multer.diskStorage({
     destination: "uploads/",
@@ -13,7 +17,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post('/', controller.createPayment);
+router.post('/', auth, controller.createPayment);
 
 router.post("/upload/:id", upload.single("image"), controller.uploadProof);
 
@@ -29,5 +33,17 @@ router.post(
     express.raw({ type: 'application/json' }),
     controller.handleWebhook
 );
+router.post('/kbz-webhook', webhook.kbzWebhook);
+router.post('/kbz/callback', async (req, res) => {
+    const { order_id, status } = req.body;
+
+    if (status === "SUCCESS") {
+        await db.query(
+            "UPDATE bookings SET status='confirmed' WHERE id=$1",
+            [order_id]
+        );
+    }
+    res.send("OK");
+});
 
 module.exports = router;
