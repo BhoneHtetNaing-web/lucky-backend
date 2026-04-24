@@ -1,12 +1,12 @@
 const db = require('../../config/db');
 const service = require('./booking.service');
-const { createBookingSchema } = require('./booking.validation');
+const { validateBooking } = require('./booking.validation');
 const { createCheckoutSession } = require('../payment/payment.service');
 
 // CREATE BOOKING
 const createBooking = async (req, res) => {
     try {
-        const { error } = createBookingSchema.validate(req.body);
+        const { error } = validateBooking.validate(req.body);
 
         if (error) {
             return res.status(400).json({
