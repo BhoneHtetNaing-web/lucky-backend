@@ -1,9 +1,9 @@
+require("dotenv").config();
 const express = require("express");
 const helmet = require("helmet");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
-require("dotenv").config();
 
 // IMPORTANT
 const app = express();
@@ -43,7 +43,7 @@ const visaRoutes = require("./modules/visa/visa.routes");
 const contactRoutes = require("./modules/contact/contact.routes");
 const flightRoutes = require("./modules/flight/flight.routes");
 
-const { authMiddleware } = require("./middleware/auth.middleware");
+const authMiddleware = require("./middleware/auth.middleware");
 
 // ✅ API Routes
 app.use("/api/auth", authRoutes);
